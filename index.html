@@ -1,0 +1,690 @@
+mkdir -p /home/claude/morpho-frontend && cat > /home/claude/morpho-frontend/index.html << 'HTMLEOF'
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MorphoGen — كلمة واحدة → تطبيق كامل</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=Noto+Kufi+Arabic:wght@300;400;700;900&display=swap');
+
+:root {
+  --bg: #04060c;
+  --panel: #070b14;
+  --border: #0f1828;
+  --line: #162438;
+  --text: #5a7a9a;
+  --mid: #8aaac8;
+  --white: #c8e0f8;
+  --green: #00ffaa;
+  --amber: #ffcc00;
+  --red: #ff2244;
+  --blue: #44aaff;
+  --purple: #aa66ff;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px 60px;
+}
+
+/* ── HEADER ── */
+.header {
+  width: 100%;
+  max-width: 860px;
+  text-align: center;
+  margin-bottom: 36px;
+}
+.logo {
+  font-family: 'Noto Kufi Arabic', sans-serif;
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--green);
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+.logo span { color: var(--amber); }
+.tagline {
+  font-size: 0.72rem;
+  color: var(--text);
+  letter-spacing: 0.15em;
+  margin-bottom: 4px;
+}
+.sub-tagline {
+  font-family: 'Noto Kufi Arabic', sans-serif;
+  font-size: 0.85rem;
+  color: var(--mid);
+}
+
+/* ── INPUT BOX ── */
+.input-section {
+  width: 100%;
+  max-width: 860px;
+  margin-bottom: 20px;
+}
+.input-label {
+  font-size: 0.58rem;
+  color: var(--text);
+  letter-spacing: 0.18em;
+  margin-bottom: 8px;
+  display: block;
+}
+.input-row {
+  display: flex;
+  gap: 10px;
+}
+.word-input {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--white);
+  padding: 14px 20px;
+  font-family: 'Noto Kufi Arabic', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.word-input:focus { border-color: var(--green); }
+.word-input::placeholder { color: var(--line); font-weight: 300; }
+
+.output-select {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--mid);
+  padding: 0 16px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  outline: none;
+  cursor: pointer;
+  min-width: 120px;
+}
+.gen-btn {
+  background: none;
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  padding: 14px 28px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.gen-btn:hover { background: var(--amber); color: var(--bg); }
+.gen-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ── WAZN PILLS ── */
+.wazn-pills {
+  width: 100%;
+  max-width: 860px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.pill {
+  padding: 5px 14px;
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-family: 'Noto Kufi Arabic', sans-serif;
+  font-size: 0.68rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pill:hover { border-color: var(--green); color: var(--green); }
+.pill.active { border-color: var(--green); color: var(--green); background: #00ffaa0a; }
+
+/* ── PROGRESS BAR ── */
+.prog-wrap { width: 100%; max-width: 860px; height: 1px; background: var(--line); margin-bottom: 20px; }
+.prog-bar  { height: 100%; background: var(--green); width: 0%; transition: width 0.3s; }
+
+/* ── RESULT INFO ── */
+.result-info {
+  width: 100%;
+  max-width: 860px;
+  display: none;
+  margin-bottom: 16px;
+}
+.result-info.show { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+.ri-cell { background: var(--panel); padding: 10px 14px; }
+.ri-label { font-size: 0.5rem; color: var(--text); letter-spacing: 0.14em; margin-bottom: 4px; }
+.ri-val   { font-size: 0.8rem; font-weight: 700; color: var(--white); }
+.ri-val.green  { color: var(--green); }
+.ri-val.amber  { color: var(--amber); }
+.ri-val.purple { color: var(--purple); }
+
+/* ── TABS ── */
+.tabs {
+  width: 100%;
+  max-width: 860px;
+  display: none;
+  margin-bottom: 0;
+}
+.tabs.show { display: flex; }
+.tab-btn {
+  padding: 8px 20px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  transition: all 0.15s;
+}
+.tab-btn.active { color: var(--green); border-color: var(--green); background: #00ffaa08; }
+
+/* ── CODE OUTPUT ── */
+.output-area {
+  width: 100%;
+  max-width: 860px;
+  display: none;
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+.output-area.show { display: block; }
+.output-header {
+  background: #050810;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.58rem;
+  color: var(--text);
+  letter-spacing: 0.12em;
+}
+.copy-btn {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 3px 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.58rem;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.copy-btn:hover { border-color: var(--green); color: var(--green); }
+.code-block {
+  padding: 16px;
+  overflow-x: auto;
+  max-height: 380px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+pre {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  line-height: 1.7;
+  color: var(--mid);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ── PREVIEW FRAME ── */
+.preview-wrap {
+  width: 100%;
+  max-width: 860px;
+  display: none;
+  border: 1px solid var(--border);
+  margin-top: 0;
+}
+.preview-wrap.show { display: block; }
+.preview-header {
+  background: #050810;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 16px;
+  font-size: 0.58rem;
+  color: var(--text);
+  letter-spacing: 0.12em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+iframe {
+  width: 100%;
+  height: 360px;
+  border: none;
+  background: #06090f;
+  display: block;
+}
+
+/* ── IMPLICIT COMMANDS ── */
+.implicit-section {
+  width: 100%;
+  max-width: 860px;
+  display: none;
+  margin-top: 12px;
+}
+.implicit-section.show { display: block; }
+.impl-title { font-size: 0.56rem; color: var(--text); letter-spacing: 0.16em; margin-bottom: 8px; }
+.impl-list { display: flex; gap: 6px; flex-wrap: wrap; }
+.impl-tag {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--green);
+  padding: 4px 12px;
+  font-family: 'Noto Kufi Arabic', sans-serif;
+  font-size: 0.68rem;
+}
+
+/* ── EXAMPLES ── */
+.examples {
+  width: 100%;
+  max-width: 860px;
+  margin-top: 28px;
+}
+.ex-title { font-size: 0.56rem; color: var(--text); letter-spacing: 0.16em; margin-bottom: 10px; }
+.ex-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.ex-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.ex-card:hover { border-color: var(--amber); }
+.ex-word {
+  font-family: 'Noto Kufi Arabic', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--amber);
+  margin-bottom: 3px;
+}
+.ex-wazn { font-size: 0.55rem; color: var(--text); }
+.ex-type { font-size: 0.6rem; color: var(--mid); margin-top: 3px; }
+
+/* ── ERROR ── */
+.error-box {
+  width: 100%;
+  max-width: 860px;
+  background: #ff224410;
+  border: 1px solid var(--red);
+  color: var(--red);
+  padding: 12px 16px;
+  font-size: 0.72rem;
+  display: none;
+  margin-bottom: 12px;
+}
+.error-box.show { display: block; }
+
+/* ── FOOTER ── */
+.footer {
+  margin-top: 40px;
+  font-size: 0.55rem;
+  color: var(--line);
+  text-align: center;
+  letter-spacing: 0.12em;
+}
+
+/* ── SPINNER ── */
+.spinner {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border: 1px solid var(--line);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Morpho<span>Gen</span></div>
+  <div class="tagline">MORPHOLOGICAL WEIGHT → FULL APPLICATION</div>
+  <div class="sub-tagline">كلمة عربية واحدة → تطبيق كامل يعمل فوراً</div>
+</div>
+
+<!-- Input -->
+<div class="input-section">
+  <span class="input-label">أدخل كلمة عربية بوزن صرفي</span>
+  <div class="input-row">
+    <input class="word-input" id="wordInput" type="text"
+      placeholder="احسب / تعلّم / تراسل / استشر..."
+      onkeydown="if(event.key==='Enter')generate()">
+    <select class="output-select" id="outputType">
+      <option value="html">HTML</option>
+      <option value="react">React</option>
+      <option value="both">كلاهما</option>
+    </select>
+    <button class="gen-btn" id="genBtn" onclick="generate()">▶ ولِّد</button>
+  </div>
+</div>
+
+<!-- Wazn pills -->
+<div class="wazn-pills" id="waznPills">
+  <span style="font-size:0.55rem;color:var(--text);letter-spacing:0.14em;margin-left:4px;align-self:center">الأوزان:</span>
+  <div class="pill" onclick="setWazn('فَعَلَ')">فَعَلَ — أداة</div>
+  <div class="pill" onclick="setWazn('تفعَّلَ')">تفعَّلَ — تعلم</div>
+  <div class="pill" onclick="setWazn('تفاعَلَ')">تفاعَلَ — تواصل</div>
+  <div class="pill" onclick="setWazn('اسْتَفْعَلَ')">استفعَلَ — خدمة</div>
+  <div class="pill" onclick="setWazn('انْفَعَلَ')">انفعَلَ — مراقبة</div>
+  <div class="pill" onclick="setWazn('افْتَعَلَ')">افتعَلَ — إنشاء</div>
+</div>
+
+<div class="prog-wrap"><div class="prog-bar" id="pb"></div></div>
+
+<!-- Error -->
+<div class="error-box" id="errBox"></div>
+
+<!-- Result info -->
+<div class="result-info" id="resultInfo">
+  <div class="ri-cell"><div class="ri-label">الكلمة</div><div class="ri-val amber" id="riWord">—</div></div>
+  <div class="ri-cell"><div class="ri-label">الوزن</div><div class="ri-val green" id="riWazn">—</div></div>
+  <div class="ri-cell"><div class="ri-label">النوع</div><div class="ri-val" id="riType">—</div></div>
+  <div class="ri-cell"><div class="ri-label">التدفق</div><div class="ri-val purple" id="riFlow">—</div></div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs" id="tabs">
+  <button class="tab-btn active" id="tabHtml" onclick="switchTab('html')">HTML</button>
+  <button class="tab-btn" id="tabReact" onclick="switchTab('react')">React</button>
+  <button class="tab-btn" id="tabPreview" onclick="switchTab('preview')">معاينة مباشرة</button>
+</div>
+
+<!-- HTML output -->
+<div class="output-area" id="htmlArea">
+  <div class="output-header">
+    <span id="htmlLabel">HTML OUTPUT</span>
+    <button class="copy-btn" onclick="copyCode('htmlCode')">نسخ</button>
+  </div>
+  <div class="code-block"><pre id="htmlCode"></pre></div>
+</div>
+
+<!-- React output -->
+<div class="output-area" id="reactArea" style="display:none">
+  <div class="output-header">
+    <span>REACT COMPONENT</span>
+    <button class="copy-btn" onclick="copyCode('reactCode')">نسخ</button>
+  </div>
+  <div class="code-block"><pre id="reactCode"></pre></div>
+</div>
+
+<!-- Preview -->
+<div class="preview-wrap" id="previewArea" style="display:none">
+  <div class="preview-header">
+    <span>LIVE PREVIEW — التطبيق يعمل الآن</span>
+    <span style="color:var(--green);font-size:0.58rem">● LIVE</span>
+  </div>
+  <iframe id="previewFrame" sandbox="allow-scripts"></iframe>
+</div>
+
+<!-- Implicit commands -->
+<div class="implicit-section" id="implicitSection">
+  <div class="impl-title">الأوامر الضمنية — مدمجة في الوزن</div>
+  <div class="impl-list" id="implicitList"></div>
+</div>
+
+<!-- Examples -->
+<div class="examples">
+  <div class="ex-title">أمثلة جاهزة — انقر لتوليد</div>
+  <div class="ex-grid">
+    <div class="ex-card" onclick="quickGen('احسب','فَعَلَ')">
+      <div class="ex-word">احسِب</div>
+      <div class="ex-wazn">فَعَلَ</div>
+      <div class="ex-type">حاسبة / مُحوِّل</div>
+    </div>
+    <div class="ex-card" onclick="quickGen('تعلّم','تفعَّلَ')">
+      <div class="ex-word">تعلَّم</div>
+      <div class="ex-wazn">تفعَّلَ</div>
+      <div class="ex-type">تطبيق تعلم</div>
+    </div>
+    <div class="ex-card" onclick="quickGen('تراسل','تفاعَلَ')">
+      <div class="ex-word">تراسَل</div>
+      <div class="ex-wazn">تفاعَلَ</div>
+      <div class="ex-type">محادثة / تواصل</div>
+    </div>
+    <div class="ex-card" onclick="quickGen('استشر','اسْتَفْعَلَ')">
+      <div class="ex-word">استشِر</div>
+      <div class="ex-wazn">استفعَلَ</div>
+      <div class="ex-type">طلب خدمة / حجز</div>
+    </div>
+    <div class="ex-card" onclick="quickGen('ارصد','انْفَعَلَ')">
+      <div class="ex-word">ارصُد</div>
+      <div class="ex-wazn">انفعَلَ</div>
+      <div class="ex-type">مراقبة / تنبيهات</div>
+    </div>
+    <div class="ex-card" onclick="quickGen('اكتب','افْتَعَلَ')">
+      <div class="ex-word">اكتُب</div>
+      <div class="ex-wazn">افتعَلَ</div>
+      <div class="ex-type">محرر / منشئ محتوى</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  MORPHOGEN v1.0 — الوزن الصرفي هو المبرمج — لا كود تقليدي
+</div>
+
+<script>
+// ── CONFIG ──
+// غيّر هذا لعنوان الـ API الخاص بك على Render
+var API_URL = window.location.hostname === "localhost"
+  ? "http://localhost:8000"
+  : "https://morphogen-api.onrender.com"; // عدِّله بعد النشر
+
+var selectedWazn = null;
+var lastResult = null;
+var currentTab = "html";
+
+function setWazn(w) {
+  selectedWazn = w;
+  document.querySelectorAll(".pill").forEach(function(p) {
+    p.className = p.textContent.includes(w.split("—")[0].trim()) ? "pill active" : "pill";
+  });
+}
+
+function showError(msg) {
+  var e = document.getElementById("errBox");
+  e.textContent = "⚠ " + msg;
+  e.className = "error-box show";
+}
+function hideError() { document.getElementById("errBox").className = "error-box"; }
+
+async function generate() {
+  var word = document.getElementById("wordInput").value.trim();
+  if (!word) { showError("أدخل كلمة عربية"); return; }
+
+  hideError();
+  document.getElementById("genBtn").disabled = true;
+  document.getElementById("genBtn").innerHTML = 'جاري التوليد <span class="spinner"></span>';
+  document.getElementById("pb").style.width = "30%";
+
+  var outType = document.getElementById("outputType").value;
+
+  try {
+    var body = { word: word, output_type: outType };
+    if (selectedWazn) body.wazn = selectedWazn;
+
+    var res = await fetch(API_URL + "/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+
+    document.getElementById("pb").style.width = "70%";
+
+    if (!res.ok) {
+      var err = await res.json();
+      throw new Error(err.detail || "خطأ في الخادم");
+    }
+
+    var data = await res.json();
+    lastResult = data;
+    document.getElementById("pb").style.width = "100%";
+    displayResult(data, outType);
+
+  } catch (e) {
+    // Fallback: توليد محلي إذا الـ API غير متاح
+    showError("الـ API غير متاح — يعمل في الوضع المحلي");
+    var fallback = localGenerate(word, selectedWazn, outType);
+    lastResult = fallback;
+    document.getElementById("pb").style.width = "100%";
+    displayResult(fallback, outType);
+  }
+
+  document.getElementById("genBtn").disabled = false;
+  document.getElementById("genBtn").textContent = "▶ ولِّد";
+  setTimeout(function(){ document.getElementById("pb").style.width = "0%"; }, 1000);
+}
+
+function displayResult(data, outType) {
+  // info strip
+  document.getElementById("riWord").textContent = data.word;
+  document.getElementById("riWazn").textContent = data.detected_wazn || data.wazn;
+  document.getElementById("riType").textContent = data.app_type || data.type;
+  document.getElementById("riFlow").textContent = (data.flow || "").split("→").join(" → ");
+  document.getElementById("resultInfo").className = "result-info show";
+
+  // tabs
+  var hasHtml  = !!data.html;
+  var hasReact = !!data.react;
+  document.getElementById("tabs").className = "tabs show";
+  document.getElementById("tabHtml").style.display  = hasHtml  ? "" : "none";
+  document.getElementById("tabReact").style.display = hasReact ? "" : "none";
+
+  // code
+  if (hasHtml)  { document.getElementById("htmlCode").textContent = data.html; }
+  if (hasReact) { document.getElementById("reactCode").textContent = data.react; }
+
+  // implicit commands
+  if (data.implicit_commands && data.implicit_commands.length) {
+    var list = document.getElementById("implicitList");
+    list.innerHTML = data.implicit_commands.map(function(c) {
+      return '<div class="impl-tag">' + c + '</div>';
+    }).join("");
+    document.getElementById("implicitSection").className = "implicit-section show";
+  }
+
+  // default tab
+  if (hasHtml) switchTab("html");
+  else if (hasReact) switchTab("react");
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  ["html","react","preview"].forEach(function(t) {
+    document.getElementById("tab"+capitalize(t)).className =
+      "tab-btn" + (t===tab?" active":"");
+  });
+  document.getElementById("htmlArea").style.display    = tab==="html"    ? "block":"none";
+  document.getElementById("reactArea").style.display   = tab==="react"   ? "block":"none";
+  document.getElementById("previewArea").style.display = tab==="preview" ? "block":"none";
+
+  if (tab==="preview" && lastResult && lastResult.html) {
+    var frame = document.getElementById("previewFrame");
+    frame.srcdoc = lastResult.html;
+  }
+}
+
+function capitalize(s) { return s.charAt(0).toUpperCase()+s.slice(1); }
+
+function copyCode(id) {
+  var text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = event.target;
+    btn.textContent = "✓ تم النسخ";
+    setTimeout(function(){ btn.textContent = "نسخ"; }, 1500);
+  });
+}
+
+function quickGen(word, wazn) {
+  document.getElementById("wordInput").value = word;
+  selectedWazn = wazn;
+  document.querySelectorAll(".pill").forEach(function(p) {
+    p.className = p.textContent.includes(wazn.split("—")[0].trim()) ? "pill active" : "pill";
+  });
+  generate();
+}
+
+// ── FALLBACK: توليد محلي بدون API ──
+var LOCAL_WAZNS = {
+  "فَعَلَ":      {type:"tool",      flow:"input→process→output",      implicit:["حدد المدخل","نفِّذ","أظهر النتيجة"],     js:"sync"},
+  "تفعَّلَ":     {type:"progressive",flow:"level1→...→levelN",         implicit:["ابدأ تدريجياً","راكِم","أكمِل"],          js:"cumulative"},
+  "تفاعَلَ":     {type:"social",    flow:"user1↔user2",                implicit:["تعرَّف","تبادَل","استمِر"],               js:"interval"},
+  "اسْتَفْعَلَ": {type:"service",   flow:"request→await→deliver",      implicit:["قدِّم","انتظِر","استلِم"],                js:"async"},
+  "انْفَعَلَ":   {type:"reactive",  flow:"event→detect→respond",       implicit:["ارصُد","اكتشِف","استجِب"],               js:"interval"},
+  "افْتَعَلَ":   {type:"creative",  flow:"intent→create→publish",      implicit:["ابدأ بقصد","أنشئ","صدِّر"],              js:"editor"},
+};
+
+function detectWaznLocal(word) {
+  var map = {
+    "تفاعَلَ":["تراسل","تبادل","تشارك","تعاون"],
+    "تفعَّلَ": ["تعلّم","تدرّب","تطوّر"],
+    "اسْتَفْعَلَ":["استشر","استفسر","اطلب","احجز"],
+    "افْتَعَلَ":["اكتب","ابتكر","انشئ"],
+    "انْفَعَلَ":["ارصد","تابع","لاحظ"],
+    "فَعَلَ":   ["احسب","ترجم","حوّل"],
+  };
+  for (var wazn in map) {
+    if (map[wazn].some(function(e){ return word.startsWith(e.slice(0,3)); })) return wazn;
+  }
+  return "فَعَلَ";
+}
+
+function localGenerate(word, wazn, outType) {
+  var w = wazn || detectWaznLocal(word);
+  if (!LOCAL_WAZNS[w]) w = "فَعَلَ";
+  var bp = LOCAL_WAZNS[w];
+
+  var jsMap = {
+    "sync": "function runAction(){var v=document.getElementById('inp').value||'مثال';document.getElementById('res').innerHTML='← '+v.toUpperCase();}",
+    "cumulative": "var lvl=0,pts=0;function runAction(){lvl++;pts+=10;document.getElementById('fill').style.width=Math.min(lvl*10,100)+'%';document.getElementById('score').textContent=pts+' نقطة';}",
+    "interval": "var msgs=[];function sendMsg(){var t=document.getElementById('inp').value;msgs.push(t);document.getElementById('res').innerHTML+='<div style=\"background:#1a2e44;padding:4px 8px;margin:2px;border-radius:8px\">'+t+'</div>';document.getElementById('inp').value='';}setInterval(function(){document.getElementById('status')&&(document.getElementById('status').textContent='● حدث: '+new Date().toLocaleTimeString('ar'));},2000);",
+    "async": "var s=['⏳ انتظار','🔄 معالجة','✅ مكتمل'];var si=0;function runAction(){var t=setInterval(function(){document.getElementById('res').textContent=s[si];si=(si+1);if(si>=s.length){clearInterval(t);si=0;}},1200);}",
+    "editor": "function runAction(){document.getElementById('res').innerHTML=document.getElementById('inp').value.replace(/\\n/g,'<br>');}",
+  };
+
+  var html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+<title>${word}</title>
+<style>body{font-family:Tahoma;background:#06090f;color:#b0cce8;padding:20px;direction:rtl;}
+input,textarea{background:#040810;border:1px solid #1a3050;color:#b0cce8;padding:8px;width:100%;margin:6px 0;border-radius:4px;font-family:Tahoma;}
+button{background:none;border:1px solid #00ffaa;color:#00ffaa;padding:8px 16px;cursor:pointer;border-radius:4px;margin:4px 0;}
+button:hover{background:#00ffaa;color:#040810;}
+h2{color:#00ffaa;margin-bottom:4px;}
+.sub{font-size:11px;color:#2e4a66;margin-bottom:16px;}
+.box{background:#040810;border:1px solid #1a2e44;padding:10px;min-height:36px;border-radius:4px;margin-top:8px;}
+.bar{height:4px;background:#1a2e44;border-radius:2px;margin:6px 0;}
+.bar>div{height:100%;background:#00ffaa;border-radius:2px;width:0%;transition:width .4s;}
+.score{font-size:1.1rem;color:#ffcc00;font-weight:bold;text-align:center;padding:6px;}
+</style></head><body>
+<h2>${word} <small style="color:#00ffaa44;font-size:12px">[${w}]</small></h2>
+<div class="sub">${bp.type} | ${bp.flow}</div>
+<input id="inp" placeholder="أدخل هنا...">
+<button onclick="runAction()">تنفيذ</button>
+<div class="bar"><div id="fill"></div></div>
+<div class="score" id="score"></div>
+<div class="box" id="res"></div>
+<div id="status" style="font-size:12px;color:#5a7a9a;margin-top:6px;text-align:center"></div>
+<script>${jsMap[bp.js]||jsMap["sync"]}<\/script></body></html>`;
+
+  return {
+    word: word, detected_wazn: w, wazn: w,
+    app_type: bp.type, type: bp.type, flow: bp.flow,
+    interaction: "auto", implicit_commands: bp.implicit,
+    example_apps: [], html: html, react: null
+  };
+}
+</script>
+</body>
+</html>
+HTMLEOF
+echo "index.html done: $(wc -l < /home/claude/morpho-frontend/index.html) lines"
